@@ -754,31 +754,74 @@ async function buildICS() {
 }
 
 
+
+// ─── Cloudflare registration ──────────────────────────────────────────────────
+
+async function registerWithWorker(workerBaseUrl, ownerSecret) {
+  // Get current WorkAxle tokens
+  const tokens = await chrome.storage.session.get(['workaxleAuthToken', 'workaxleClusterId', 'workaxleCompanyId']);
+
+  if (!tokens.workaxleAuthToken || !tokens.workaxleClusterId) {
+    throw new Error('No WorkAxle tokens found. Please open WorkAxle and refresh the schedule page first.');
+  }
+
+  const url = `${workerBaseUrl.replace(/\/$/, '')}/register`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ownerSecret,
+      authToken: tokens.workaxleAuthToken,
+      clusterId: tokens.workaxleClusterId,
+      companyId: tokens.workaxleCompanyId || '1'
+    })
+  });
+
+  const data = await response.json();
+  if (!data.success) throw new Error(data.error || 'Registration failed');
+
+  // Save user credentials
+  await chrome.storage.local.set({
+    cloudflareWorkerUrl: workerBaseUrl.replace(/\/$/, ''),
+    cloudflareUserId: data.userId,
+    cloudflareUserSecret: data.userSecret,
+    cloudflareWorkerSecret: data.userSecret,
+    cloudflareFeedUrl: data.feedUrl
+  });
+
+  return data.feedUrl;
+}
+
+
 // ─── Cloudflare Worker token push ────────────────────────────────────────────
 
 async function pushTokensToWorker(authToken, clusterId, companyId) {
-  const stored = await chrome.storage.local.get(['cloudflareWorkerUrl', 'cloudflareWorkerSecret']);
+  const stored = await chrome.storage.local.get([
+    'cloudflareWorkerUrl', 'cloudflareUserId', 'cloudflareUserSecret', 'cloudflareWorkerSecret'
+  ]);
   const workerUrl = stored.cloudflareWorkerUrl;
-  const secret = stored.cloudflareWorkerSecret;
   if (!workerUrl) return { success: false, reason: 'no-url' };
 
   const cleanUrl = workerUrl.replace(/\/$/, '');
-  const url = `${cleanUrl}/update-tokens?secret=${encodeURIComponent(secret || '')}`;
+  const body = { authToken, clusterId, companyId: companyId || '1' };
+
+  // Multi-user mode
+  if (stored.cloudflareUserId) {
+    body.userId = stored.cloudflareUserId;
+    body.userSecret = stored.cloudflareUserSecret;
+  } else {
+    // Legacy single-user mode
+    body.secret = stored.cloudflareWorkerSecret || '';
+  }
 
   try {
-    const response = await fetch(url, {
+    const response = await fetch(`${cleanUrl}/update-tokens`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        authToken,
-        clusterId,
-        companyId: companyId || '1'
-      })
+      body: JSON.stringify(body)
     });
     const text = await response.text();
-    if (!response.ok) {
-      return { success: false, reason: `${response.status}: ${text}` };
-    }
+    if (!response.ok) return { success: false, reason: `${response.status}: ${text}` };
     await chrome.storage.local.set({ lastTokenPush: new Date().toISOString() });
     return { success: true };
   } catch (err) {
@@ -819,6 +862,42 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       const result = await pushTokensToWorker(stored.workaxleAuthToken, stored.workaxleClusterId, stored.workaxleCompanyId);
       sendResponse(result);
+    })();
+    return true;
+  }
+
+  if (message.type === 'register-worker') {
+    (async () => {
+      try {
+        const feedUrl = await registerWithWorker(message.workerBaseUrl, message.ownerSecret);
+        sendResponse({ success: true, feedUrl });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (message.type === 'get-feed-url') {
+    (async () => {
+      const stored = await chrome.storage.local.get(['cloudflareFeedUrl', 'cloudflareWorkerUrl', 'cloudflareWorkerSecret']);
+      const feedUrl = stored.cloudflareFeedUrl ||
+        (stored.cloudflareWorkerUrl
+          ? `${stored.cloudflareWorkerUrl}/?secret=${stored.cloudflareWorkerSecret || ''}`
+          : null);
+      sendResponse({ feedUrl });
+    })();
+    return true;
+  }
+
+  if (message.type === 'deploy-cloudflare') {
+    (async () => {
+      try {
+        const { workerUrl, feedSecret } = await deployCloudflareWorker(message.apiToken);
+        sendResponse({ success: true, workerUrl, feedSecret });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
     })();
     return true;
   }
