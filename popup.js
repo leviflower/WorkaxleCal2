@@ -220,8 +220,8 @@
     getLinkBtn.disabled = true;
     setupStatus.textContent = 'Setting up your personal feed...';
 
-    const WORKER_BASE_URL = 'https://square-shadow-4dea.leviflower04.workers.dev';
-    const OWNER_SECRET = 'workaxle123';
+    const WORKER_BASE_URL = WORKAXLE_CONFIG.WORKER_BASE_URL;
+    const OWNER_SECRET = WORKAXLE_CONFIG.OWNER_SECRET;
 
     try {
       // Check if already registered — reuse existing feed URL
