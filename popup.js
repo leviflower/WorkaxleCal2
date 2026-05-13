@@ -29,6 +29,7 @@
   const feedUrlInput    = document.getElementById('feed-url');
   const copyUrlBtn      = document.getElementById('copy-url-btn');
   const exportIcsBtn    = document.getElementById('export-ics-btn');
+  const pushTokensBtn   = document.getElementById('push-tokens-btn');
 
   const lastSyncDiv     = document.getElementById('last-sync');
   const statusArea      = document.getElementById('status');
@@ -221,6 +222,29 @@
       copyUrlBtn.textContent = '✓';
       setTimeout(() => { copyUrlBtn.textContent = '⎘'; }, 1500);
     });
+  });
+
+  // ── Push tokens ──────────────────────────────────────────────────────────────
+
+  pushTokensBtn.addEventListener('click', async () => {
+    pushTokensBtn.disabled = true;
+    pushTokensBtn.textContent = 'Pushing...';
+    try {
+      const result = await chrome.runtime.sendMessage({ type: 'push-tokens-now' });
+      if (result.success) {
+        pushTokensBtn.textContent = '✓ Tokens pushed!';
+        showResult('Tokens pushed to Cloudflare Worker successfully. Your iCal feed is now up to date.');
+      } else {
+        pushTokensBtn.textContent = 'Push Tokens to Worker Now';
+        showResult('Push failed: ' + (result.reason || result.error || 'unknown error'), true);
+      }
+    } catch (err) {
+      pushTokensBtn.textContent = 'Push Tokens to Worker Now';
+      showResult('Push failed: ' + err.message, true);
+    } finally {
+      pushTokensBtn.disabled = false;
+      setTimeout(() => { pushTokensBtn.textContent = 'Push Tokens to Worker Now'; }, 3000);
+    }
   });
 
   // ── Google sync ───────────────────────────────────────────────────────────────
