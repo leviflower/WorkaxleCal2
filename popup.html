@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkAxle Sync</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>WorkAxle Sync</h1>
+      <button id="open-schedule-btn" class="btn-open-schedule" title="Open WorkAxle Schedule">
+        Open Schedule →
+      </button>
+    </header>
+
+    <!-- Google account -->
+    <div id="account-bar" class="account-bar">
+      <div id="account-info" class="account-info hidden">
+        <img id="account-avatar" class="account-avatar" src="" alt="">
+        <span id="account-email" class="account-email"></span>
+        <button id="sign-out-btn" class="btn-link" title="Switch account">Switch</button>
+      </div>
+      <div id="account-signed-out" class="account-signed-out">
+        <span class="account-hint">Not signed in to Google</span>
+        <button id="sign-in-btn" class="btn-link">Sign in</button>
+      </div>
+    </div>
+
+    <!-- WorkAxle token status -->
+    <div id="token-status" class="token-status">
+      <span class="status-dot"></span>
+      <span class="status-text">Checking tokens...</span>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="google">Google Calendar</button>
+      <button class="tab-btn" data-tab="apple">Apple Calendar</button>
+    </div>
+
+    <!-- Google Calendar tab -->
+    <div id="tab-google" class="tab-content">
+      <div class="calendar-section">
+        <label for="calendar-select">Calendar:</label>
+        <select id="calendar-select">
+          <option value="primary">Loading...</option>
+        </select>
+        <button id="refresh-calendars" class="btn-icon" title="Refresh calendars">↻</button>
+      </div>
+
+      <button id="sync-btn" class="btn-primary">
+        Sync Next 4 Weeks
+      </button>
+    </div>
+
+    <!-- Apple Calendar tab -->
+    <div id="tab-apple" class="tab-content hidden">
+
+      <!-- Option A: Google account sync -->
+      <div class="apple-option">
+        <p class="option-title">Option A — Via Google Calendar (easiest)</p>
+        <p class="apple-info">Sync WorkAxle → Google Calendar first, then add your Google account to Apple Calendar. Shifts appear automatically.</p>
+        <div class="apple-steps">
+          <p class="steps-title">On your iPhone or iPad:</p>
+          <ol>
+            <li>Open <strong>Settings</strong></li>
+            <li>Tap <strong>Calendar → Accounts → Add Account</strong></li>
+            <li>Tap <strong>Google</strong> and sign in</li>
+            <li>Make sure <strong>Calendars</strong> is toggled on</li>
+            <li>Open the <strong>Calendar</strong> app — shifts appear within minutes</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Option B: Live iCal feed -->
+      <div class="apple-option">
+        <p class="option-title">Option B — Live iCal Feed (always on)</p>
+        <p class="apple-info">Deploy the included <code>cloudflare-worker.js</code> to Cloudflare Workers (free), then enter your Worker URL below. The extension will automatically keep it updated with fresh tokens.</p>
+
+        <div class="feed-section">
+          <label class="feed-label">Worker Base URL</label>
+          <div class="feed-url-row">
+            <input id="worker-base-url" class="feed-url-input" type="text" placeholder="https://your-worker.workers.dev">
+          </div>
+          <label class="feed-label" style="margin-top:8px">Feed Secret</label>
+          <div class="feed-url-row">
+            <input id="worker-secret" class="feed-url-input" type="text" placeholder="the secret you set in Cloudflare">
+            <button id="save-worker-btn" class="btn-icon" title="Save">✓</button>
+          </div>
+        </div>
+
+        <div id="feed-url-section" class="feed-section hidden">
+          <label class="feed-label">Your iCal Feed URL</label>
+          <div class="feed-url-row">
+            <input id="feed-url" class="feed-url-input" type="text" readonly>
+            <button id="copy-url-btn" class="btn-icon" title="Copy URL">⎘</button>
+          </div>
+          <p class="feed-hint">Paste this URL into Apple Calendar → File → New Calendar Subscription. Set refresh to Every Hour.</p>
+        </div>
+      </div>
+
+      <button id="export-ics-btn" class="btn-secondary">
+        Download .ics File (one-time snapshot)
+      </button>
+
+    </div>
+
+    <!-- Status / result -->
+    <div id="last-sync" class="last-sync hidden"></div>
+
+    <div id="status" class="status-area">
+      <div id="spinner" class="spinner hidden"></div>
+      <span id="status-message" class="status-message"></span>
+    </div>
+
+    <div id="result" class="result hidden"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
