@@ -30,6 +30,11 @@
   const copyUrlBtn      = document.getElementById('copy-url-btn');
   const exportIcsBtn    = document.getElementById('export-ics-btn');
   const pushTokensBtn   = document.getElementById('push-tokens-btn');
+  const getLinkBtn      = document.getElementById('get-link-btn');
+  const setupStatus     = document.getElementById('setup-status');
+  const appleSetup      = document.getElementById('apple-setup');
+  const appleReady      = document.getElementById('apple-ready');
+  const resetWorkerBtn  = document.getElementById('reset-worker-btn');
 
   const lastSyncDiv     = document.getElementById('last-sync');
   const statusArea      = document.getElementById('status');
@@ -125,13 +130,21 @@
   // ── Token status ──────────────────────────────────────────────────────────────
 
   async function checkTokens() {
-    const response = await chrome.runtime.sendMessage({ type: 'get-tokens' });
-    tokenStatus.classList.remove('has-tokens', 'no-tokens', 'error');
-
-    if (response.hasTokens) {
-      tokenStatus.classList.add('has-tokens');
-      tokenStatus.querySelector('.status-text').textContent = `WorkAxle: tokens captured`;
-    } else {
+    try {
+      const response = await Promise.race([
+        chrome.runtime.sendMessage({ type: 'get-tokens' }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+      ]);
+      tokenStatus.classList.remove('has-tokens', 'no-tokens', 'error');
+      if (response.hasTokens) {
+        tokenStatus.classList.add('has-tokens');
+        tokenStatus.querySelector('.status-text').textContent = 'WorkAxle: tokens captured';
+      } else {
+        tokenStatus.classList.add('no-tokens');
+        tokenStatus.querySelector('.status-text').textContent = 'No tokens — refresh WorkAxle page';
+      }
+    } catch {
+      tokenStatus.classList.remove('has-tokens', 'no-tokens');
       tokenStatus.classList.add('no-tokens');
       tokenStatus.querySelector('.status-text').textContent = 'No tokens — refresh WorkAxle page';
     }
@@ -184,44 +197,80 @@
 
   // ── iCal feed URL ─────────────────────────────────────────────────────────────
 
-  async function loadWorkerConfig() {
-    const response = await chrome.runtime.sendMessage({ type: 'get-worker-url' });
-    if (response.url) {
-      workerBaseInput.value = response.url;
-      workerSecretInput.value = response.secret || '';
-      updateFeedUrl(response.url, response.secret);
-    }
-  }
+  // ── Apple Calendar state ─────────────────────────────────────────────────────
 
-  function updateFeedUrl(baseUrl, secret) {
-    if (baseUrl) {
-      const url = `${baseUrl.replace(/\/$/, '')}/?secret=${encodeURIComponent(secret || '')}`;
-      feedUrlInput.value = url;
-      feedUrlSection.classList.remove('hidden');
+  async function loadAppleState() {
+    const resp = await chrome.runtime.sendMessage({ type: 'get-feed-url' });
+    if (resp.feedUrl) {
+      showAppleReady(resp.feedUrl);
     } else {
-      feedUrlSection.classList.add('hidden');
+      appleSetup.classList.remove('hidden');
+      appleReady.classList.add('hidden');
     }
   }
 
-  saveWorkerBtn.addEventListener('click', async () => {
-    const url = workerBaseInput.value.trim();
-    const secret = workerSecretInput.value.trim();
-    await chrome.runtime.sendMessage({ type: 'set-worker-url', url, secret });
-    updateFeedUrl(url, secret);
-    saveWorkerBtn.textContent = '✓';
-    setTimeout(() => { saveWorkerBtn.textContent = '✓'; }, 1500);
-    showResult('Worker URL saved! The extension will push tokens automatically when WorkAxle is refreshed.');
+  function showAppleReady(feedUrl) {
+    appleSetup.classList.add('hidden');
+    appleReady.classList.remove('hidden');
+    if (feedUrlInput) feedUrlInput.value = feedUrl;
+  }
+
+  // Get My Subscribe Link button
+  getLinkBtn.addEventListener('click', async () => {
+    getLinkBtn.disabled = true;
+    setupStatus.textContent = 'Setting up your personal feed...';
+
+    // Use the hardcoded worker URL and owner secret from the extension
+    // These are set by the extension owner (you) — users never see them
+    const WORKER_BASE_URL = 'https://square-shadow-4dea.leviflower04.workers.dev';
+    const OWNER_SECRET = 'workaxle123';
+
+    try {
+      const resp = await chrome.runtime.sendMessage({
+        type: 'register-worker',
+        workerBaseUrl: WORKER_BASE_URL,
+        ownerSecret: OWNER_SECRET
+      });
+
+      if (resp.success) {
+        setupStatus.textContent = '';
+        showAppleReady(resp.feedUrl);
+        showResult('Your personal feed is ready! Tap Subscribe to add it to Apple Calendar.');
+      } else {
+        setupStatus.textContent = resp.error || 'Setup failed. Make sure WorkAxle is open first.';
+      }
+    } catch (err) {
+      setupStatus.textContent = 'Error: ' + err.message;
+    } finally {
+      getLinkBtn.disabled = false;
+    }
+  });
+
+  // Reset button
+  resetWorkerBtn.addEventListener('click', async () => {
+    await chrome.storage.local.remove(['cloudflareWorkerUrl', 'cloudflareUserId', 'cloudflareUserSecret', 'cloudflareWorkerSecret', 'cloudflareFeedUrl']);
+    appleSetup.classList.remove('hidden');
+    appleReady.classList.add('hidden');
+    setupStatus.textContent = '';
+    hideResult();
   });
 
   copyUrlBtn.addEventListener('click', () => {
-    if (!feedUrlInput.value) {
-      showResult('Enter your Worker URL and secret first.', true);
+    if (!feedUrlInput || !feedUrlInput.value) {
+      showResult('No feed URL yet.', true);
       return;
     }
     navigator.clipboard.writeText(feedUrlInput.value).then(() => {
       copyUrlBtn.textContent = '✓';
       setTimeout(() => { copyUrlBtn.textContent = '⎘'; }, 1500);
     });
+  });
+
+  // Legacy save worker btn (hidden but keep functional)
+  saveWorkerBtn && saveWorkerBtn.addEventListener && saveWorkerBtn.addEventListener('click', async () => {
+    const url = workerBaseInput.value.trim();
+    const secret = workerSecretInput.value.trim();
+    if (url) await chrome.runtime.sendMessage({ type: 'set-worker-url', url, secret });
   });
 
   // ── Push tokens ──────────────────────────────────────────────────────────────
@@ -280,6 +329,7 @@
       spinner.classList.add('hidden');
     }
   });
+
 
   // ── iCal export ───────────────────────────────────────────────────────────────
 
@@ -342,11 +392,13 @@
   // ── Init ─────────────────────────────────────────────────────────────────────
 
   (async () => {
-    await loadWorkerConfig();
-    await loadLastSync();
-    await checkTokens();
-    await loadAccount();
-    // Non-interactive on load — only loads calendars if already signed in
+    await loadAppleState().catch(() => {});
+    await loadLastSync().catch(() => {});
+    await checkTokens().catch(() => {
+      tokenStatus.classList.add('no-tokens');
+      tokenStatus.querySelector('.status-text').textContent = 'No tokens — refresh WorkAxle page';
+    });
+    await loadAccount().catch(() => {});
     await loadCalendars(false).catch(() => {});
     setStatus('');
   })();
