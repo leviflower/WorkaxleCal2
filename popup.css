@@ -426,3 +426,40 @@ code {
   border-radius: 3px;
   font-size: 11px;
 }
+
+.apple-hint {
+  font-size: 11px;
+  color: #888;
+  line-height: 1.4;
+  text-align: center;
+  padding: 0 4px;
+}
+
+/* ── Apple Calendar states ───────────────────────────────── */
+
+.apple-state {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setup-done {
+  background: #e6f4ea;
+  border: 1px solid #ceead6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #137333;
+  text-align: center;
+}
+
+.setup-step {
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
