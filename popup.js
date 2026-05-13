@@ -220,12 +220,18 @@
     getLinkBtn.disabled = true;
     setupStatus.textContent = 'Setting up your personal feed...';
 
-    // Use the hardcoded worker URL and owner secret from the extension
-    // These are set by the extension owner (you) — users never see them
     const WORKER_BASE_URL = 'https://square-shadow-4dea.leviflower04.workers.dev';
     const OWNER_SECRET = 'workaxle123';
 
     try {
+      // Check if already registered — reuse existing feed URL
+      const existing = await chrome.runtime.sendMessage({ type: 'get-feed-url' });
+      if (existing.feedUrl) {
+        setupStatus.textContent = '';
+        showAppleReady(existing.feedUrl);
+        return;
+      }
+
       const resp = await chrome.runtime.sendMessage({
         type: 'register-worker',
         workerBaseUrl: WORKER_BASE_URL,
@@ -235,7 +241,7 @@
       if (resp.success) {
         setupStatus.textContent = '';
         showAppleReady(resp.feedUrl);
-        showResult('Your personal feed is ready! Tap Subscribe to add it to Apple Calendar.');
+        showResult('Your personal feed is ready! Copy the link and add it to Apple Calendar.');
       } else {
         setupStatus.textContent = resp.error || 'Setup failed. Make sure WorkAxle is open first.';
       }
@@ -246,8 +252,9 @@
     }
   });
 
-  // Reset button
+  // Reset button — ask for confirmation first
   resetWorkerBtn.addEventListener('click', async () => {
+    if (!confirm('This will remove your saved feed link. You will need to re-add the new link to Apple Calendar. Are you sure?')) return;
     await chrome.storage.local.remove(['cloudflareWorkerUrl', 'cloudflareUserId', 'cloudflareUserSecret', 'cloudflareWorkerSecret', 'cloudflareFeedUrl']);
     appleSetup.classList.remove('hidden');
     appleReady.classList.add('hidden');
