@@ -439,7 +439,7 @@ async function getGoogleAuth(interactive = true) {
       `&response_type=token` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&scope=${encodeURIComponent(OAUTH_SCOPES)}` +
-      `&prompt=select_account`;
+      `&prompt=consent%20select_account`;
 
     return await new Promise((resolve, reject) => {
       chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, async (responseUrl) => {
@@ -760,18 +760,30 @@ async function pushTokensToWorker(authToken, clusterId, companyId) {
   const stored = await chrome.storage.local.get(['cloudflareWorkerUrl', 'cloudflareWorkerSecret']);
   const workerUrl = stored.cloudflareWorkerUrl;
   const secret = stored.cloudflareWorkerSecret;
-  if (!workerUrl) return; // Not configured, skip silently
+  if (!workerUrl) return { success: false, reason: 'no-url' };
 
-  const url = `${workerUrl.replace(/\/$/, '')}/update-tokens?secret=${encodeURIComponent(secret || '')}`;
-  await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      authToken,
-      clusterId,
-      companyId: companyId || '1'
-    })
-  });
+  const cleanUrl = workerUrl.replace(/\/$/, '');
+  const url = `${cleanUrl}/update-tokens?secret=${encodeURIComponent(secret || '')}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        authToken,
+        clusterId,
+        companyId: companyId || '1'
+      })
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      return { success: false, reason: `${response.status}: ${text}` };
+    }
+    await chrome.storage.local.set({ lastTokenPush: new Date().toISOString() });
+    return { success: true };
+  } catch (err) {
+    return { success: false, reason: err.message };
+  }
 }
 
 // ─── Message handler ─────────────────────────────────────────────────────────
@@ -794,6 +806,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Push fresh tokens to Cloudflare Worker if configured
       await pushTokensToWorker(message.authorization, message.clusterId, message.companyId).catch(() => {});
       sendResponse({ success: true });
+    })();
+    return true;
+  }
+
+  if (message.type === 'push-tokens-now') {
+    (async () => {
+      const stored = await chrome.storage.session.get(['workaxleAuthToken', 'workaxleClusterId', 'workaxleCompanyId']);
+      if (!stored.workaxleAuthToken) {
+        sendResponse({ success: false, error: 'No WorkAxle tokens captured yet' });
+        return;
+      }
+      const result = await pushTokensToWorker(stored.workaxleAuthToken, stored.workaxleClusterId, stored.workaxleCompanyId);
+      sendResponse(result);
     })();
     return true;
   }
@@ -909,6 +934,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 (async () => {
   await loadStoredTokens();
+  // Clear any cached Google token on startup so account picker always shows
+  await chrome.storage.session.remove('googleAccessToken');
+  accessToken = null;
 })();
 // ─── Auto-sync (alarms) ──────────────────────────────────────────────────────
 
