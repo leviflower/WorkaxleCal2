@@ -57,8 +57,7 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "inject.js",
-        "cloudflare-worker.js"
+        "inject.js"
       ],
       "matches": [
         "https://icc.workaxle.com/*",
