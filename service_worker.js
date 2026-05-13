@@ -530,13 +530,16 @@ async function listCalendars() {
 }
 
 async function listEvents(calendarId, startDate, endDate) {
+  // Use Sydney UTC+10 offset to ensure we catch all shifts in the window
+  // A shift at 10am AEST = midnight UTC the same day — using +10:00 anchors correctly
   const params = new URLSearchParams({
-    timeMin: startDate + 'T00:00:00Z',
-    timeMax: endDate + 'T23:59:59Z',
+    timeMin: startDate + 'T00:00:00+10:00',
+    timeMax: endDate + 'T23:59:59+10:00',
     privateExtendedProperty: `source=${SOURCE_TAG}`,
     singleEvents: 'true',
     orderBy: 'startTime',
-    maxResults: '2500'
+    maxResults: '2500',
+    showDeleted: 'false'
   });
 
   const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(normalizeCalendarId(calendarId))}/events?${params}`;
@@ -571,6 +574,7 @@ async function upsertEvent(calendarId, shift, existingEventIds) {
 
   const event = {
     id: eventId,
+    status: 'confirmed',
     summary: shift.roleName,
     location: shift.siteName || '',
     description: `Shift ID: ${shift.id}\n\n${scheduleDetails}`,
@@ -582,19 +586,12 @@ async function upsertEvent(calendarId, shift, existingEventIds) {
   };
 
   const calId = normalizeCalendarId(calendarId);
-  const exists = existingEventIds.has(eventId);
+  const baseUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events`;
 
-  let url, method;
-  if (exists) {
-    url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events/${eventId}`;
-    method = 'PATCH';
-  } else {
-    url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events`;
-    method = 'POST';
-  }
-
-  const response = await fetch(url, {
-    method,
+  // Always try PATCH first (update) — if event doesn't exist, fall back to POST (create)
+  // This handles cases where events exist but weren't found by listEvents
+  const patchResponse = await fetch(`${baseUrl}/${eventId}`, {
+    method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json'
@@ -602,12 +599,42 @@ async function upsertEvent(calendarId, shift, existingEventIds) {
     body: JSON.stringify(event)
   });
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Failed to upsert event: ${response.status} - ${text.substring(0, 200)}`);
+  if (patchResponse.ok) return await patchResponse.json();
+
+  // 404 means it doesn't exist — create it
+  if (patchResponse.status === 404 || !existingEventIds.has(eventId)) {
+    const postResponse = await fetch(baseUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(event)
+    });
+
+    if (postResponse.ok) return await postResponse.json();
+
+    // 409 conflict means event already exists with this ID — try PATCH without ID
+    if (postResponse.status === 409) {
+      const retryResponse = await fetch(`${baseUrl}/${eventId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(event)
+      });
+      if (retryResponse.ok) return await retryResponse.json();
+      const retryText = await retryResponse.text();
+      throw new Error(`Failed to upsert event: ${retryResponse.status} - ${retryText.substring(0, 200)}`);
+    }
+
+    const postText = await postResponse.text();
+    throw new Error(`Failed to upsert event: ${postResponse.status} - ${postText.substring(0, 200)}`);
   }
 
-  return await response.json();
+  const patchText = await patchResponse.text();
+  throw new Error(`Failed to upsert event: ${patchResponse.status} - ${patchText.substring(0, 200)}`);
 }
 
 async function deleteEvent(calendarId, eventId) {
