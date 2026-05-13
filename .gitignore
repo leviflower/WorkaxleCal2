@@ -9,3 +9,7 @@ Thumbs.db
 # Secrets — never commit these
 secrets.json
 *.env
+
+# Extension config contains your personal Worker URL and secret
+# Copy config.example.js to config.js and fill in your own values
+config.js
