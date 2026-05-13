@@ -890,18 +890,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message.type === 'deploy-cloudflare') {
-    (async () => {
-      try {
-        const { workerUrl, feedSecret } = await deployCloudflareWorker(message.apiToken);
-        sendResponse({ success: true, workerUrl, feedSecret });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
-      }
-    })();
-    return true;
-  }
-
   if (message.type === 'set-worker-url') {
     (async () => {
       await chrome.storage.local.set({ cloudflareWorkerUrl: message.url, cloudflareWorkerSecret: message.secret });
