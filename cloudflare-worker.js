@@ -15,13 +15,11 @@
  *   1. Deploy this Worker
  *   2. Create a KV namespace named TOKENS and bind it to the Worker
  *   3. Add secret: OWNER_SECRET — any password you choose
- *   4. Add secret: WORKER_BASE_URL — your worker URL e.g. https://square-shadow-4dea.leviflower04.workers.dev
+ *   4. Add secret: WORKER_BASE_URL — your worker URL e.g. https://your-worker.workers.dev
  */
 
 const API_BASE = 'https://api.app.workaxle.com/v1';
 const FOUR_WEEKS_DAYS = 28;
-// Tokens are considered stale after this many hours
-const TOKEN_STALE_HOURS = 120; // 5 days
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -65,11 +63,17 @@ export default {
     if (url.pathname === '/register' && request.method === 'POST') {
       try {
         const body = await request.json();
-        if (env.OWNER_SECRET && body.ownerSecret !== env.OWNER_SECRET) {
+
+        // Verify owner secret — rejects requests not from the extension
+        if (!env.OWNER_SECRET || body.ownerSecret !== env.OWNER_SECRET) {
           return resp({ success: false, error: 'Unauthorized' }, 401);
         }
         if (!body.authToken || !body.clusterId) {
           return resp({ success: false, error: 'Missing tokens — open WorkAxle first' }, 400);
+        }
+        // Basic token validation — must look like a Bearer token
+        if (!body.authToken.startsWith('Bearer ')) {
+          return resp({ success: false, error: 'Invalid token format' }, 400);
         }
 
         const userId = generateId(16);
@@ -147,24 +151,23 @@ export default {
           return new Response('Unauthorized', { status: 401, headers: CORS });
         }
 
-        // Check if tokens are stale
-        const ageHours = (Date.now() - (user.updatedAt || 0)) / 3600000;
-        const isStale = ageHours > TOKEN_STALE_HOURS;
-
-        if (isStale) {
-          // Return feed with a reminder event instead of failing
-          const ics = generateReminderICS();
+        // Always try to fetch shifts first — only show reminder if tokens actually fail
+        // This means the reminder only appears when genuinely needed, not on a timer
+        try {
+          const shifts = await fetchShifts(user.authToken, user.clusterId, user.companyId || '1');
+          const ics = generateICS(shifts);
           return icsResp(ics);
+        } catch (fetchErr) {
+          // Only show reminder if tokens have actually expired (401)
+          // For other errors (network, WorkAxle down) return last known state or error
+          if (fetchErr.message.includes('expired') || fetchErr.message.includes('401')) {
+            return icsResp(generateReminderICS());
+          }
+          // For other errors don't wipe the calendar — return a 500 so the
+          // calendar app retries next hour rather than showing a reminder
+          return new Response(`Error: ${fetchErr.message}`, { status: 500, headers: CORS });
         }
-
-        const shifts = await fetchShifts(user.authToken, user.clusterId, user.companyId || '1');
-        const ics = generateICS(shifts);
-        return icsResp(ics);
       } catch (err) {
-        // If token expired, return reminder feed
-        if (err.message.includes('expired') || err.message.includes('401')) {
-          return icsResp(generateReminderICS());
-        }
         return new Response(`Error: ${err.message}`, { status: 500, headers: CORS });
       }
     }
@@ -186,12 +189,16 @@ export default {
           return icsResp(generateReminderICS());
         }
 
-        const shifts = await fetchShifts(authToken, clusterId, companyId);
-        return icsResp(generateICS(shifts));
-      } catch (err) {
-        if (err.message.includes('expired') || err.message.includes('401')) {
-          return icsResp(generateReminderICS());
+        try {
+          const shifts = await fetchShifts(authToken, clusterId, companyId);
+          return icsResp(generateICS(shifts));
+        } catch (fetchErr) {
+          if (fetchErr.message.includes('expired') || fetchErr.message.includes('401')) {
+            return icsResp(generateReminderICS());
+          }
+          return new Response(`Error: ${fetchErr.message}`, { status: 500, headers: CORS });
         }
+      } catch (err) {
         return new Response(`Error: ${err.message}`, { status: 500, headers: CORS });
       }
     }
