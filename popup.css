@@ -1,0 +1,428 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  width: 340px;
+  background: #f7f8fa;
+  color: #1a1a2e;
+}
+
+.container {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+header h1 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a2e;
+  letter-spacing: -0.2px;
+  flex: 1;
+}
+
+.btn-open-schedule {
+  padding: 5px 10px;
+  background: #e8f0fe;
+  color: #1a73e8;
+  border: 1px solid #d2e3fc;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.btn-open-schedule:hover {
+  background: #d2e3fc;
+}
+
+/* ── Account bar ─────────────────────────────────────────── */
+
+.account-bar {
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  padding: 8px 12px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+}
+
+.account-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.account-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.account-email {
+  font-size: 12px;
+  color: #444;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-signed-out {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.account-hint {
+  font-size: 12px;
+  color: #888;
+  flex: 1;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #1a73e8;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.btn-link:hover {
+  background: #e8f0fe;
+}
+
+/* ── Token status ────────────────────────────────────────── */
+
+.token-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ccc;
+  flex-shrink: 0;
+}
+
+.token-status.has-tokens .status-dot { background: #34a853; }
+.token-status.no-tokens .status-dot  { background: #fbbc04; }
+.token-status.error .status-dot      { background: #ea4335; }
+
+/* ── Tabs ────────────────────────────────────────────────── */
+
+.tabs {
+  display: flex;
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  background: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tab-btn:hover {
+  background: #f0f4ff;
+}
+
+.tab-btn.active {
+  background: #1a73e8;
+  color: #fff;
+}
+
+.tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tab-content.hidden {
+  display: none;
+}
+
+/* ── Calendar section ────────────────────────────────────── */
+
+.calendar-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.calendar-section label {
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+}
+
+#calendar-select {
+  flex: 1;
+  padding: 4px 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 12px;
+  background: #fafafa;
+  min-width: 0;
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+
+.btn-primary {
+  width: 100%;
+  padding: 11px;
+  background: #1a73e8;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover:not(:disabled) { background: #1557b0; }
+.btn-primary:disabled { background: #a8c7fa; cursor: not-allowed; }
+
+.btn-secondary {
+  width: 100%;
+  padding: 10px;
+  background: #fff;
+  color: #1a73e8;
+  border: 1.5px solid #1a73e8;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-secondary:hover:not(:disabled) { background: #e8f0fe; }
+.btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-icon {
+  padding: 5px 8px;
+  background: #f0f4ff;
+  border: 1px solid #d2e3fc;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #1a73e8;
+  flex-shrink: 0;
+}
+
+.btn-icon:hover { background: #d2e3fc; }
+
+/* ── Apple Calendar section ──────────────────────────────── */
+
+.apple-info {
+  font-size: 12px;
+  color: #555;
+  line-height: 1.5;
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.feed-section {
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.feed-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.feed-url-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.feed-url-input {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #333;
+  background: #fafafa;
+  min-width: 0;
+  font-family: monospace;
+}
+
+.feed-hint {
+  font-size: 11px;
+  color: #888;
+  line-height: 1.4;
+}
+
+.apple-steps {
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.steps-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 6px;
+}
+
+.apple-steps ol {
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.apple-steps li {
+  font-size: 12px;
+  color: #555;
+  line-height: 1.4;
+}
+
+/* ── Status area ─────────────────────────────────────────── */
+
+.status-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  min-height: 40px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e0e0e0;
+  border-top-color: #1a73e8;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.spinner.hidden { display: none; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.status-message {
+  font-size: 12px;
+  color: #666;
+}
+
+.result {
+  padding: 10px 12px;
+  background: #e6f4ea;
+  border: 1px solid #ceead6;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #137333;
+}
+
+.result.hidden { display: none; }
+
+.result.error {
+  background: #fce8e6;
+  border-color: #f5c6c2;
+  color: #c5221f;
+}
+
+.hidden { display: none !important; }
+
+/* ── Last sync ───────────────────────────────────────────── */
+
+.last-sync {
+  font-size: 11px;
+  color: #888;
+  text-align: center;
+  padding: 4px 0;
+}
+
+.last-sync.hidden { display: none; }
+
+/* ── Apple options ───────────────────────────────────────── */
+
+.apple-option {
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+code {
+  font-family: monospace;
+  background: #f0f4ff;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+}
