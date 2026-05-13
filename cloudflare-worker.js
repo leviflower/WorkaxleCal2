@@ -40,27 +40,52 @@ export default {
     // ── Token update endpoint (called by the browser extension) ──────────────
     // POST /update-tokens?secret=xxx   { authToken, clusterId, companyId }
     if (url.pathname === '/update-tokens') {
+      // Handle CORS preflight
+      if (request.method === 'OPTIONS') {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          }
+        });
+      }
+
       if (env.FEED_SECRET && secret !== env.FEED_SECRET) {
-        return new Response('Unauthorized', { status: 401 });
+        return new Response('Unauthorized', {
+          status: 401,
+          headers: { 'Access-Control-Allow-Origin': '*' }
+        });
       }
       if (request.method !== 'POST') {
-        return new Response('Method not allowed', { status: 405 });
+        return new Response('Method not allowed', {
+          status: 405,
+          headers: { 'Access-Control-Allow-Origin': '*' }
+        });
       }
       try {
         const body = await request.json();
         if (!body.authToken || !body.clusterId) {
-          return new Response('Missing authToken or clusterId', { status: 400 });
+          return new Response('Missing authToken or clusterId', {
+            status: 400,
+            headers: { 'Access-Control-Allow-Origin': '*' }
+          });
         }
-        // Store tokens in KV (if bound) or env — use Workers KV for persistence
-        // If you have a KV namespace bound as TOKENS, use that:
         if (env.TOKENS) {
           await env.TOKENS.put('authToken', body.authToken);
           await env.TOKENS.put('clusterId', body.clusterId);
           await env.TOKENS.put('companyId', body.companyId || '1');
         }
-        return new Response('Tokens updated', { status: 200 });
+        return new Response('Tokens updated', {
+          status: 200,
+          headers: { 'Access-Control-Allow-Origin': '*' }
+        });
       } catch (err) {
-        return new Response('Error: ' + err.message, { status: 500 });
+        return new Response('Error: ' + err.message, {
+          status: 500,
+          headers: { 'Access-Control-Allow-Origin': '*' }
+        });
       }
     }
 
