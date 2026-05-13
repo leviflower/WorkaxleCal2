@@ -40,7 +40,9 @@ function icsResp(ics) {
       ...CORS,
       'Content-Type': 'text/calendar; charset=utf-8',
       'Content-Disposition': 'inline; filename="workaxle.ics"',
-      'Cache-Control': 'no-cache'
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+      'Pragma': 'no-cache',
+      'Expires': '0'
     }
   });
 }
@@ -397,12 +399,22 @@ function generateICS(shifts) {
       const end = new Date(s.endTime);
       if (isNaN(start) || isNaN(end)) continue;
 
+      const durationHrs = ((end - start) / 3600000).toFixed(2);
+      const startStr = start.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', timeZone: 'Australia/Sydney' });
+      const endStr = end.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', timeZone: 'Australia/Sydney' });
+      const dateStr = start.toLocaleDateString('en-AU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Australia/Sydney' });
+
       const desc = [
+        'Schedule Details',
+        dateStr,
+        `${startStr} - ${endStr} (${durationHrs} hrs)`,
+        '',
         s.employeeName ? `Employee: ${s.employeeName}` : null,
-        s.costGroupSubGroup ? `Cost Group: ${s.costGroupSubGroup}` : null,
+        s.roleName ? `Position: ${s.roleName}` : null,
+        s.costGroupSubGroup ? `Cost Group / Sub Group: ${s.costGroupSubGroup}` : null,
         s.tags?.length ? `Tags: ${s.tags.join(', ')}` : null,
         s.note ? `Note: ${s.note}` : null
-      ].filter(Boolean).join('\\n');
+      ].filter(v => v !== null).join('\\n');
 
       lines.push('BEGIN:VEVENT');
       lines.push(`UID:workaxle-${s.id}@workaxle-sync`);
