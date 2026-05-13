@@ -58,56 +58,48 @@
     <!-- Apple Calendar tab -->
     <div id="tab-apple" class="tab-content hidden">
 
-      <!-- Option A: Google account sync -->
-      <div class="apple-option">
-        <p class="option-title">Option A — Via Google Calendar (easiest)</p>
-        <p class="apple-info">Sync WorkAxle → Google Calendar first, then add your Google account to Apple Calendar. Shifts appear automatically.</p>
-        <div class="apple-steps">
-          <p class="steps-title">On your iPhone or iPad:</p>
-          <ol>
-            <li>Open <strong>Settings</strong></li>
-            <li>Tap <strong>Calendar → Accounts → Add Account</strong></li>
-            <li>Tap <strong>Google</strong> and sign in</li>
-            <li>Make sure <strong>Calendars</strong> is toggled on</li>
-            <li>Open the <strong>Calendar</strong> app — shifts appear within minutes</li>
-          </ol>
-        </div>
+      <!-- Not set up yet -->
+      <div id="apple-setup" class="apple-state">
+        <p class="apple-info">Get a personal subscribe link — your shifts update automatically every hour with no computer needed.</p>
+        <p class="apple-info" style="margin-top:4px">Make sure you have WorkAxle open and the schedule loaded first.</p>
+        <button id="get-link-btn" class="btn-primary">
+          ⚡ Get My Subscribe Link
+        </button>
+        <p id="setup-status" class="apple-hint"></p>
       </div>
 
-      <!-- Option B: Live iCal feed -->
-      <div class="apple-option">
-        <p class="option-title">Option B — Live iCal Feed (always on)</p>
-        <p class="apple-info">Deploy the included <code>cloudflare-worker.js</code> to Cloudflare Workers (free), then enter your Worker URL below. The extension will automatically keep it updated with fresh tokens.</p>
+      <!-- Ready -->
+      <div id="apple-ready" class="apple-state hidden">
+        <div class="setup-done">✅ Live feed active — updates every hour</div>
 
         <div class="feed-section">
-          <label class="feed-label">Worker Base URL</label>
-          <div class="feed-url-row">
-            <input id="worker-base-url" class="feed-url-input" type="text" placeholder="https://your-worker.workers.dev">
-          </div>
-          <label class="feed-label" style="margin-top:8px">Feed Secret</label>
-          <div class="feed-url-row">
-            <input id="worker-secret" class="feed-url-input" type="text" placeholder="the secret you set in Cloudflare">
-            <button id="save-worker-btn" class="btn-icon" title="Save">✓</button>
-          </div>
-        </div>
-
-        <button id="push-tokens-btn" class="btn-secondary" style="margin-top:4px">
-          Push Tokens to Worker Now
-        </button>
-
-        <div id="feed-url-section" class="feed-section hidden">
-          <label class="feed-label">Your iCal Feed URL</label>
+          <label class="feed-label">Your calendar subscription link</label>
           <div class="feed-url-row">
             <input id="feed-url" class="feed-url-input" type="text" readonly>
-            <button id="copy-url-btn" class="btn-icon" title="Copy URL">⎘</button>
+            <button id="copy-url-btn" class="btn-icon" title="Copy">⎘</button>
           </div>
-          <p class="feed-hint">Paste this URL into Apple Calendar → File → New Calendar Subscription. Set refresh to Every Hour.</p>
+          <p class="apple-hint" style="text-align:left;margin-top:4px">Copy this link and use it to add a calendar subscription in Apple Calendar, Outlook, or any calendar app that supports iCal URLs.</p>
         </div>
+
+        <button id="push-tokens-btn" class="btn-secondary">
+          🔄 Refresh Tokens Now
+        </button>
+        <button id="reset-worker-btn" class="btn-link" style="margin-top:2px;width:100%">Reset / set up again</button>
       </div>
 
-      <button id="export-ics-btn" class="btn-secondary">
-        Download .ics File (one-time snapshot)
-      </button>
+      <!-- One-time download -->
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e8eaed">
+        <button id="export-ics-btn" class="btn-secondary">
+          ⬇ Download .ics File (one-time snapshot)
+        </button>
+        <p class="apple-hint" style="margin-top:4px">Won't auto-update. Use Subscribe above for live sync.</p>
+      </div>
+
+      <!-- Hidden elements for background functionality -->
+      <input id="worker-base-url" type="hidden">
+      <input id="worker-secret" type="hidden">
+      <button id="save-worker-btn" style="display:none"></button>
+      <div id="feed-url-section" class="hidden"></div>
 
     </div>
 
